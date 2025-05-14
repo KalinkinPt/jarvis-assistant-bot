@@ -105,15 +105,36 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🤖 Не смог распознать дату и время. Попробуй иначе.")
         return
 
+    # поведение, если repeat есть
+    if "repeat" in gpt_result:
+        task = {
+            "chat_id": update.effective_chat.id,
+            "text": gpt_result["text"],
+            "time": gpt_result["time"],  # формат: "08:00"
+            "repeat": gpt_result["repeat"]
+        }
+        schedule_repeating_task(task, context.application)
+        await update.message.reply_text(f"🔁 Буду напоминать: '{task['text']}' в {task['time']} по дням: {', '.join(task['repeat'])}")
+        return
+
+    # если time — список (много дат)
+    if isinstance(gpt_result["time"], list):
+        for t in gpt_result["time"]:
+            task = {
+                "chat_id": update.effective_chat.id,
+                "text": gpt_result["text"],
+                "time": t
+            }
+            schedule_task(task, context.application)
+        await update.message.reply_text(f"✅ Запланировал несколько напоминаний: {len(gpt_result['time'])}")
+        return
+
+    # обычная задача
     task = {
         "chat_id": update.effective_chat.id,
         "text": gpt_result["text"],
         "time": gpt_result["time"]
     }
-
-    tasks = load_tasks()
-    tasks.append(task)
-    save_tasks(tasks)
     schedule_task(task, context.application)
 
     time_str = datetime.fromisoformat(task["time"]).strftime('%Y-%m-%d %H:%M')
