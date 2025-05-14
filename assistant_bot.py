@@ -8,7 +8,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-
+import pytz
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
