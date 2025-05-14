@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 import pytz
 import openai
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters, JobQueue
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters, JobQueue, CallbackQueryHandler
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -254,10 +255,12 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("tasks", show_tasks))
     app.add_handler(CommandHandler("delete", delete_task))
     app.add_handler(CommandHandler("clear", clear_tasks))
-    app.add_handler(CommandHandler("clear", clear_tasks))
-    app.add_handler(telegram.ext.CallbackQueryHandler(button_handler))
+    app.add_handler(CallbackQueryHandler(button_handler))  # обработка кнопок
+
+    # этот обработчик должен быть последним!
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
+    # загрузка задач из файла при запуске
     tasks = load_tasks()
     for task in tasks:
         if "repeat" in task:
