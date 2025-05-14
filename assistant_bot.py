@@ -27,8 +27,7 @@ def save_tasks(tasks):
 
 def schedule_task(task, application):
     tz = pytz.timezone("Europe/Tallinn")
-    run_time = pytz.timezone("Europe/Tallinn").localize(datetime.fromisoformat(task["time"]))
-
+    run_time = tz.localize(datetime.fromisoformat(task["time"]))  # 🛠 исправили тут
     delay = (run_time - datetime.now(tz)).total_seconds()
 
     if delay > 0:
@@ -37,6 +36,7 @@ def schedule_task(task, application):
             lambda context: context.bot.send_message(chat_id=task["chat_id"], text=f"🔔 Напоминание: {task['text']}"),
             when=delay
         )
+
 
 async def parse_with_gpt(text):
     tz = pytz.timezone("Europe/Tallinn")
