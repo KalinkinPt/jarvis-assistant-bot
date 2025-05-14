@@ -39,14 +39,36 @@ def schedule_task(task, context):
 
 async def parse_with_gpt(text):
     prompt = f"""
-Ты — ассистент, который извлекает задачу и время из пользовательского запроса.
-Ответь в формате JSON с двумя полями:
-  - "text" — описание задачи
-  - "time" — время в формате ISO (например, 2025-05-15T18:00:00)
+Ты — ассистент, который извлекает задачу и дату из человеческой фразы.
+
+Ты должен вернуть ТОЛЬКО JSON без пояснений и комментариев, вот в таком точном виде:
+
+{{
+  "text": "что сделать",
+  "time": "2025-05-15T18:00:00"
+}}
 
 Фраза: {text}
 Ответ:
 """
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2
+        )
+        content = response.choices[0].message["content"].strip()
+
+        # Удалим возможные обёртки вроде "```json"
+        if content.startswith("```"):
+            content = content.split("```")[-1].strip()
+
+        return json.loads(content)
+    except Exception as e:
+        print("GPT Error:", e)
+        return None
+
 
     try:
         response = openai.ChatCompletion.create(
