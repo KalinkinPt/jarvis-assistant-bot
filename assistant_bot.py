@@ -209,6 +209,14 @@ async def delete_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("❗ Неверный номер. Посмотри /tasks")
 
+async def clear_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tasks = load_tasks()
+    chat_id = update.effective_chat.id
+
+    tasks = [task for task in tasks if task["chat_id"] != chat_id]
+    save_tasks(tasks)
+
+    await update.message.reply_text("🧹 Все твои задачи удалены.")
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -221,6 +229,7 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("tasks", show_tasks))
     app.add_handler(CommandHandler("delete", delete_task))
+    app.add_handler(CommandHandler("clear", clear_tasks))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
     tasks = load_tasks()
