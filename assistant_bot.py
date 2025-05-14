@@ -240,7 +240,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"✅ Запомнил! Напомню: ‘{task['text']}’ в {time_str}")
 
 
-async def show_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def show_tasks_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("📋 Все задачи", callback_data="tasks_all")],
+        [InlineKeyboardButton("📅 Задачи на сегодня", callback_data="tasks_today")],
+        [InlineKeyboardButton("🧹 Очистить все", callback_data="confirm_clear")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("Выбери, что показать:", reply_markup=reply_markup)
+
     print("📥 Вызван /tasks")
     tasks = load_tasks()
     chat_id = update.effective_chat.id
@@ -389,19 +397,26 @@ async def clear_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
     chat_id = query.message.chat_id
 
     if query.data == "confirm_clear":
         tasks = load_tasks()
         tasks = [task for task in tasks if task["chat_id"] != chat_id]
         save_tasks(tasks)
-
         await query.message.delete()
         await query.message.reply_text("🧹 Все задачи удалены.")
+
     elif query.data == "cancel_clear":
         await query.message.delete()
         await query.message.reply_text("❌ Удаление отменено.")
+
+    elif query.data == "tasks_all":
+        await query.message.delete()
+        await show_tasks(update, context)
+
+    elif query.data == "tasks_today":
+        await query.message.delete()
+        await show_tasks_today(update, context)
 
 
 
@@ -413,7 +428,7 @@ if __name__ == "__main__":
     job_queue = app.job_queue
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("tasks", show_tasks))
+    app.add_handler(CommandHandler("tasks", show_tasks_menu))
     app.add_handler(CommandHandler("tasks_today", show_tasks_today))
     app.add_handler(CommandHandler("delete", delete_task))
     app.add_handler(CommandHandler("clear", clear_tasks))
