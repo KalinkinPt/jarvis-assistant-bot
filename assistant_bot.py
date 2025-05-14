@@ -152,6 +152,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"✅ Запомнил! Напомню: ‘{task['text']}’ в {time_str}")
 
 async def show_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("📥 Вызван /tasks")
     tasks = load_tasks()
     chat_id = update.effective_chat.id
     user_tasks = [task for task in tasks if task["chat_id"] == chat_id]
