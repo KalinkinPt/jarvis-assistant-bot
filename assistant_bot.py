@@ -140,9 +140,10 @@ if __name__ == "__main__":
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
     tasks = load_tasks()
-for task in tasks:
-    if datetime.fromisoformat(task["time"]) > datetime.now(pytz.timezone("Europe/Tallinn")):
-        schedule_task(task, app.bot)
+    for task in tasks:
+        if datetime.fromisoformat(task["time"]) > datetime.now(pytz.timezone("Europe/Tallinn")):
+            schedule_task(task, app.bot)
 
     print("Бот запущен.")
     app.run_polling()
+
