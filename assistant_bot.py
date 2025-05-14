@@ -116,7 +116,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not gpt_result or not gpt_result.get("time"):
         await update.message.reply_text("🤖 Не смог распознать дату и время. Попробуй иначе.")
         return
+# ✅ Если GPT вернул несколько задач
+    if isinstance(gpt_result, list):
+        count = 0
+        for entry in gpt_result:
+            if "text" in entry and "time" in entry:
+                task = {
+                    "chat_id": update.effective_chat.id,
+                    "text": entry["text"],
+                    "time": entry["time"]
+                }
+                schedule_task(task, context.application)
+                tasks = load_tasks()
+                tasks.append(task)
+                save_tasks(tasks)
+                count += 1
 
+        await update.message.reply_text(f"✅ Запомнил {count} задач(и)")
+        return
+    
     # 🔁 Повторяющаяся задача
     if "repeat" in gpt_result:
         task = {
