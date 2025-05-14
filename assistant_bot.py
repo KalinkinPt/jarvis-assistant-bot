@@ -156,11 +156,65 @@ async def parse_with_gpt(text):
         if content.startswith("```"):
             content = content.split("```")[-1].strip()
 
-        return json.loads(content)
+        try:
+    return json.loads(content)
+except json.JSONDecodeError as e:
+    first_brace = content.find('{')
+    last_brace = content.rfind('}')
+    if first_brace != -1 and last_brace != -1:
+        try:
+            return json.loads(content[first_brace:last_brace+1])
+        except:
+            pass
+    print("❌ Ошибка JSON:", e)
+    return None
+
 
     except Exception as e:
         print("❌ GPT ошибка:", e)
         return None
+
+async def show_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("📥 Вызван /tasks")
+    tasks = load_tasks()
+    chat_id = update.effective_chat.id
+    user_tasks = [task for task in tasks if task["chat_id"] == chat_id]
+
+    if not user_tasks:
+        await update.message.reply_text("🔕 У тебя нет запланированных задач.")
+        return
+
+    tz = pytz.timezone("Europe/Tallinn")
+    now = datetime.now(tz)
+
+    def format_timedelta(delta):
+        days = delta.days
+        seconds = delta.seconds
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+
+        parts = []
+        if days > 0:
+            parts.append(f"{days} дн")
+        if hours > 0:
+            parts.append(f"{hours} ч")
+        if minutes > 0:
+            parts.append(f"{minutes} мин")
+
+        return "через " + " ".join(parts) if parts else "скоро"
+
+    text = "🗓 Твои задачи:\n"
+    for i, task in enumerate(user_tasks):
+        if "repeat" in task:
+            text += f"{i + 1}. 🔁 {task['text']} — в {task['time']} по {', '.join(task['repeat'])}\n"
+        else:
+            t = datetime.fromisoformat(task["time"]).astimezone(tz)
+            delta = t - now
+            left = format_timedelta(delta) if delta.total_seconds() > 0 else "⏱ Уже прошло"
+            t_str = t.strftime('%Y-%m-%d %H:%M')
+            text += f"{i + 1}. ⏰ {task['text']} — {t_str} ({left})\n"
+
+    await update.message.reply_text(text)
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
