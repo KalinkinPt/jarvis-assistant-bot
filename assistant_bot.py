@@ -282,6 +282,58 @@ async def show_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(text)
 
+async def show_tasks_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("📥 Вызван /tasks_today")
+    tasks = load_tasks()
+    chat_id = update.effective_chat.id
+    user_tasks = [task for task in tasks if task["chat_id"] == chat_id]
+
+    tz = pytz.timezone("Europe/Tallinn")
+    now = datetime.now(tz)
+    today_date = now.date()
+
+    today_tasks = []
+
+    for task in user_tasks:
+        if "repeat" in task:
+            continue  # не показываем повторяющиеся
+        try:
+            task_time = datetime.fromisoformat(task["time"]).astimezone(tz)
+            if task_time.date() == today_date:
+                today_tasks.append((task["text"], task_time))
+        except:
+            continue
+
+    if not today_tasks:
+        await update.message.reply_text("Сегодня у тебя нет задач 💤")
+        return
+
+    def format_timedelta(delta):
+        days = delta.days
+        seconds = delta.seconds
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+
+        parts = []
+        if days > 0:
+            parts.append(f"{days} дн")
+        if hours > 0:
+            parts.append(f"{hours} ч")
+        if minutes > 0:
+            parts.append(f"{minutes} мин")
+
+        return "через " + " ".join(parts) if parts else "скоро"
+
+    text = "📅 Задачи на сегодня:\n"
+    for i, (task_text, task_time) in enumerate(sorted(today_tasks, key=lambda x: x[1])):
+        delta = task_time - now
+        left = format_timedelta(delta) if delta.total_seconds() > 0 else "⏱ Уже прошло"
+        t_str = task_time.strftime('%H:%M')
+        text += f"{i + 1}. ⏰ {task_text} — {t_str} ({left})\n"
+
+    await update.message.reply_text(text)
+
+
 async def delete_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tasks = load_tasks()
     chat_id = update.effective_chat.id
@@ -352,6 +404,7 @@ if __name__ == "__main__":
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("tasks", show_tasks))
+    app.add_handler(CommandHandler("tasks_today", show_tasks_today))
     app.add_handler(CommandHandler("delete", delete_task))
     app.add_handler(CommandHandler("clear", clear_tasks))
     app.add_handler(CallbackQueryHandler(button_handler))  # обработка кнопок
