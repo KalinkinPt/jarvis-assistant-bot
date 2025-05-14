@@ -2,13 +2,14 @@ import os
 import json
 import logging
 from datetime import datetime
-import dateparser
+import pytz
+import asyncio
 import openai
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-import pytz
+
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -32,19 +33,14 @@ def save_tasks(tasks):
 def schedule_task(task, context):
     run_time = datetime.fromisoformat(task["time"])
     print(f"⏰ Планируем задачу: {task['text']} на {run_time}")
-    scheduler.add_job(
-        lambda: context.bot.send_message(chat_id=task["chat_id"], text=f"🔔 Напоминание: {task['text']}"),
-        trigger='date',
-        run_date=run_time
-    )
 
+    async def send():
+        await context.bot.send_message(chat_id=task["chat_id"], text=f"🔔 Напоминание: {task['text']}")
 
-from datetime import datetime
-import json
-import openai
+    scheduler.add_job(lambda: asyncio.run(send()), trigger='date', run_date=run_time)
 
 async def parse_with_gpt(text):
-    tz = pytz.timezone("Europe/Tallinn")  # или Europe/Kyiv
+    tz = pytz.timezone("Europe/Tallinn")
     now = datetime.now(tz)
     today = now.strftime("%Y-%m-%d")
     current_time = now.strftime("%H:%M")
@@ -73,39 +69,16 @@ async def parse_with_gpt(text):
             temperature=0.2
         )
         content = response.choices[0].message["content"].strip()
+        print("📥 GPT вернул:
+", content)
 
         if content.startswith("```"):
             content = content.split("```")[-1].strip()
 
-        print("📥 GPT вернул:\n", content)
         return json.loads(content)
 
     except Exception as e:
         print("❌ GPT ошибка:", e)
-        return None
-
-
-
-        # Удалим возможные обёртки вроде "```json"
-        if content.startswith("```"):
-            content = content.split("```")[-1].strip()
-
-        return json.loads(content)
-    except Exception as e:
-        print("GPT Error:", e)
-        return None
-
-
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
-        )
-        content = response.choices[0].message["content"]
-        return json.loads(content)
-    except Exception as e:
-        print("GPT Error:", e)
         return None
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -133,7 +106,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привет! Напиши что-то вроде: «напомни завтра в 10:00 купить хлеб» — и я запомню 😉")
 
-
 if __name__ == "__main__":
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
@@ -146,4 +118,3 @@ if __name__ == "__main__":
 
     print("Бот запущен.")
     app.run_polling()
-
