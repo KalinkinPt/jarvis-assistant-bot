@@ -1,13 +1,11 @@
 import os
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
-import asyncio
 import openai
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-from apscheduler.schedulers.background import BackgroundScheduler
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters, JobQueue
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,9 +13,6 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = OPENAI_API_KEY
-
-scheduler = BackgroundScheduler()
-scheduler.start()
 
 def load_tasks():
     try:
@@ -30,18 +25,17 @@ def save_tasks(tasks):
     with open('tasks.json', 'w') as f:
         json.dump(tasks, f)
 
-def schedule_task(task, context):
+def schedule_task(task, application):
+    tz = pytz.timezone("Europe/Tallinn")
     run_time = datetime.fromisoformat(task["time"])
-    print(f"⏰ Планируем задачу: {task['text']} на {run_time}")
+    delay = (run_time - datetime.now(tz)).total_seconds()
 
-    async def send():
-        await context.bot.send_message(chat_id=task["chat_id"], text=f"🔔 Напоминание: {task['text']}")
-
-    def runner():
-        loop = asyncio.get_event_loop()
-        loop.create_task(send())
-
-    scheduler.add_job(runner, trigger='date', run_date=run_time)
+    if delay > 0:
+        print(f"⏰ Планируем задачу через {int(delay)} сек: {task['text']}")
+        application.job_queue.run_once(
+            lambda context: context.bot.send_message(chat_id=task["chat_id"], text=f"🔔 Напоминание: {task['text']}"),
+            when=delay
+        )
 
 async def parse_with_gpt(text):
     tz = pytz.timezone("Europe/Tallinn")
@@ -73,8 +67,8 @@ async def parse_with_gpt(text):
             temperature=0.2
         )
         content = response.choices[0].message["content"].strip()
-        print("📥 GPT вернул:\n", content)
-
+        print("📥 GPT вернул:
+", content)
 
         if content.startswith("```"):
             content = content.split("```")[-1].strip()
@@ -102,7 +96,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tasks = load_tasks()
     tasks.append(task)
     save_tasks(tasks)
-    schedule_task(task, context)
+    schedule_task(task, context.application)
 
     time_str = datetime.fromisoformat(task["time"]).strftime('%Y-%m-%d %H:%M')
     await update.message.reply_text(f"✅ Запомнил! Напомню: ‘{task['text']}’ в {time_str}")
@@ -115,10 +109,11 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
+    # Восстанавливаем старые задачи
     tasks = load_tasks()
     for task in tasks:
         if datetime.fromisoformat(task["time"]) > datetime.now(pytz.timezone("Europe/Tallinn")):
-            schedule_task(task, app.bot)
+            schedule_task(task, app)
 
     print("Бот запущен.")
     app.run_polling()
