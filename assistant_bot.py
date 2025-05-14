@@ -110,13 +110,17 @@ async def parse_with_gpt(text):
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message is None or update.message.text is None:
+        return
+
     user_input = update.message.text
     gpt_result = await parse_with_gpt(user_input)
 
-    if not gpt_result or not gpt_result.get("time"):
+    if not gpt_result:
         await update.message.reply_text("🤖 Не смог распознать дату и время. Попробуй иначе.")
         return
-# ✅ Если GPT вернул несколько задач
+
+    # ✅ Несколько задач в списке
     if isinstance(gpt_result, list):
         count = 0
         for entry in gpt_result:
@@ -134,7 +138,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(f"✅ Запомнил {count} задач(и)")
         return
-    
+
     # 🔁 Повторяющаяся задача
     if "repeat" in gpt_result:
         task = {
@@ -149,11 +153,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tasks.append(task)
         save_tasks(tasks)
 
-        await update.message.reply_text(f"🔁 Буду напоминать: '{task['text']}' в {task['time']} по дням: {', '.join(task['repeat'])}")
+        await update.message.reply_text(
+            f"🔁 Буду напоминать: '{task['text']}' в {task['time']} по дням: {', '.join(task['repeat'])}"
+        )
         return
 
-    # 📅 Несколько дат
-    if isinstance(gpt_result["time"], list):
+    # 📅 Несколько дат для одной задачи
+    if isinstance(gpt_result.get("time"), list):
         for t in gpt_result["time"]:
             task = {
                 "chat_id": update.effective_chat.id,
@@ -161,7 +167,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "time": t
             }
             schedule_task(task, context.application)
-
             tasks = load_tasks()
             tasks.append(task)
             save_tasks(tasks)
@@ -170,6 +175,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # 🕐 Обычная одноразовая задача
+    if not gpt_result.get("time"):
+        await update.message.reply_text("🤖 Не смог распознать дату и время. Попробуй иначе.")
+        return
+
     task = {
         "chat_id": update.effective_chat.id,
         "text": gpt_result["text"],
