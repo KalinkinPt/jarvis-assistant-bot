@@ -37,7 +37,11 @@ def schedule_task(task, context):
     async def send():
         await context.bot.send_message(chat_id=task["chat_id"], text=f"🔔 Напоминание: {task['text']}")
 
-    scheduler.add_job(lambda: asyncio.run(send()), trigger='date', run_date=run_time)
+    def runner():
+        loop = asyncio.get_event_loop()
+        loop.create_task(send())
+
+    scheduler.add_job(runner, trigger='date', run_date=run_time)
 
 async def parse_with_gpt(text):
     tz = pytz.timezone("Europe/Tallinn")
