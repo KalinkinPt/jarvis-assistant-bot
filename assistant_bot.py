@@ -218,6 +218,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_input = update.message.text
+    
+    if user_input == "🗑 Удалить задачу":
+        await update.message.reply_text("Чтобы удалить задачу, используй команду /delete [номер задачи]")
+        return
+
         
     # Обработка текстовых кнопок
     if user_input == "🗓 Мои задачи":
