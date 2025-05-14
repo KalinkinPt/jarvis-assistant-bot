@@ -157,7 +157,7 @@ async def parse_with_gpt(text):
             content = content.split("```")[-1].strip()
 
         try:
-    return json.loads(content)
+            return json.loads(content)
 except json.JSONDecodeError as e:
     first_brace = content.find('{')
     last_brace = content.rfind('}')
