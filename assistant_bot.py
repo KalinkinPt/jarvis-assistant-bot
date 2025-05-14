@@ -132,7 +132,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"🔁 Буду напоминать: '{task['text']}' в {task['time']} по дням: {', '.join(task['repeat'])}")
     return
-
     # если time — список (много дат)
     if isinstance(gpt_result["time"], list):
         for t in gpt_result["time"]:
