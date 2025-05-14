@@ -67,8 +67,8 @@ async def parse_with_gpt(text):
             temperature=0.2
         )
         content = response.choices[0].message["content"].strip()
-        print("📥 GPT вернул:
-", content)
+        print("📥 GPT вернул:\\n", content)
+
 
         if content.startswith("```"):
             content = content.split("```")[-1].strip()
