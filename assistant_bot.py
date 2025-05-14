@@ -42,7 +42,8 @@ import json
 import openai
 
 async def parse_with_gpt(text):
-    now = datetime.now()
+    tz = pytz.timezone("Europe/Tallinn")  # или Europe/Kyiv
+    now = datetime.now(tz)
     today = now.strftime("%Y-%m-%d")
     current_time = now.strftime("%H:%M")
 
