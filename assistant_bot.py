@@ -37,6 +37,23 @@ def schedule_task(task, application):
             when=delay
         )
 
+def schedule_repeating_task(task, application):
+    from datetime import time
+
+    hour, minute = map(int, task["time"].split(":"))
+    message = task["text"]
+    days = task["repeat"]  # ["Monday", "Tuesday", ...]
+
+    day_indexes = {
+        "Monday": 0, "Tuesday": 1, "Wednesday": 2,
+        "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6
+    }
+
+    application.job_queue.run_daily(
+        lambda context: context.bot.send_message(chat_id=task["chat_id"], text=f"🔁 Напоминание: {message}"),
+        time=time(hour, minute),
+        days=[day_indexes[day] for day in days]
+    )
 
 async def parse_with_gpt(text):
     tz = pytz.timezone("Europe/Tallinn")
