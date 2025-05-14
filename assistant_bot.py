@@ -80,7 +80,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     schedule_task(task, context)
 
     time_str = datetime.fromisoformat(task["time"]).strftime('%Y-%m-%d %H:%M')
-    await update.message.reply_text(f"✅ Запомнил! Напомню: "{task['text']}" в {time_str}")
+    await update.message.reply_text(f"✅ Запомнил! Напомню: ‘{task['text']}’ в {time_str}")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привет! Напиши мне что-то вроде: "напомни завтра в 10:00 купить хлеб" — и я запомню 😉")
