@@ -403,6 +403,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tasks = load_tasks()
         tasks = [task for task in tasks if task["chat_id"] != chat_id]
         save_tasks(tasks)
+
         await query.message.delete()
         await query.message.reply_text("🧹 Все задачи удалены.")
 
@@ -412,13 +413,24 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == "tasks_all":
         await query.message.delete()
-        await show_tasks(update, context)
+        fake_update = Update(update.update_id, message=query.message)
+        await show_tasks(fake_update, context)
 
     elif query.data == "tasks_today":
         await query.message.delete()
-        await show_tasks_today(update, context)
+        fake_update = Update(update.update_id, message=query.message)
+        await show_tasks_today(fake_update, context)
 
 
+async def show_tasks_from_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.callback_query.message.chat_id
+    fake_update = Update(update.update_id, message=update.callback_query.message)
+    await show_tasks(fake_update, context)
+
+async def show_tasks_today_from_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.callback_query.message.chat_id
+    fake_update = Update(update.update_id, message=update.callback_query.message)
+    await show_tasks_today(fake_update, context)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привет! Напиши что-то вроде: «напомни завтра в 10:00 купить хлеб» — и я запомню 😉")
