@@ -31,11 +31,13 @@ def save_tasks(tasks):
 
 def schedule_task(task, context):
     run_time = datetime.fromisoformat(task["time"])
+    print(f"⏰ Планируем задачу: {task['text']} на {run_time}")
     scheduler.add_job(
         lambda: context.bot.send_message(chat_id=task["chat_id"], text=f"🔔 Напоминание: {task['text']}"),
         trigger='date',
         run_date=run_time
     )
+
 
 from datetime import datetime
 import json
@@ -138,9 +140,9 @@ if __name__ == "__main__":
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
     tasks = load_tasks()
-    for task in tasks:
-        if datetime.fromisoformat(task["time"]) > datetime.now():
-            schedule_task(task, app.bot)
+for task in tasks:
+    if datetime.fromisoformat(task["time"]) > datetime.now(pytz.timezone("Europe/Tallinn")):
+        schedule_task(task, app.bot)
 
     print("Бот запущен.")
     app.run_polling()
