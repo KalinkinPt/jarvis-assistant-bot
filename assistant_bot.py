@@ -3,6 +3,7 @@ import json
 import logging
 from datetime import datetime
 import dateparser
+import openai
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -11,6 +12,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai.api_key = OPENAI_API_KEY
+
 scheduler = BackgroundScheduler()
 scheduler.start()
 
@@ -28,36 +32,59 @@ def save_tasks(tasks):
 def schedule_task(task, context):
     run_time = datetime.fromisoformat(task["time"])
     scheduler.add_job(
-        lambda: context.bot.send_message(chat_id=task["chat_id"], text=f"Напоминание: {task['text']}"),
+        lambda: context.bot.send_message(chat_id=task["chat_id"], text=f"🔔 Напоминание: {task['text']}"),
         trigger='date',
         run_date=run_time
     )
 
+async def parse_with_gpt(text):
+    prompt = (
+        "Ты — ассистент, который извлекает задачу и время из пользовательского запроса. "
+        "Ответь в формате JSON с двумя полями: 'text' — описание задачи, 'time' — время в формате ISO (например, 2025-05-15T18:00:00).
+"
+        f"Фраза: {text}
+"
+        "Ответ:"
+    )
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3
+        )
+        content = response.choices[0].message["content"]
+        return json.loads(content)
+    except Exception as e:
+        print("GPT Error:", e)
+        return None
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    dt = dateparser.parse(text, languages=['ru'])
-    if not dt:
-        await update.message.reply_text("Не смог распознать дату/время. Попробуй иначе.")
+    user_input = update.message.text
+    gpt_result = await parse_with_gpt(user_input)
+
+    if not gpt_result or not gpt_result.get("time"):
+        await update.message.reply_text("🤖 Не смог распознать дату и время. Попробуй иначе.")
         return
+
     task = {
         "chat_id": update.effective_chat.id,
-        "text": text,
-        "time": dt.isoformat()
+        "text": gpt_result["text"],
+        "time": gpt_result["time"]
     }
+
     tasks = load_tasks()
     tasks.append(task)
     save_tasks(tasks)
     schedule_task(task, context)
-    await update.message.reply_text(f"Запомнил! Напомню: {text} — {dt.strftime('%Y-%m-%d %H:%M')}")
+
+    time_str = datetime.fromisoformat(task["time"]).strftime('%Y-%m-%d %H:%M')
+    await update.message.reply_text(f"✅ Запомнил! Напомню: "{task['text']}" в {time_str}")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Привет! Я твой ассистент. Напиши, что тебе напомнить.")
+    await update.message.reply_text("Привет! Напиши мне что-то вроде: "напомни завтра в 10:00 купить хлеб" — и я запомню 😉")
 
 if __name__ == "__main__":
-    from telegram.ext import ApplicationBuilder
-
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
@@ -68,4 +95,3 @@ if __name__ == "__main__":
 
     print("Бот запущен.")
     app.run_polling()
-
