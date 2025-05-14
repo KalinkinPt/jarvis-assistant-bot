@@ -41,7 +41,7 @@ async def parse_with_gpt(text):
     prompt = f"""
 Ты — ассистент, который извлекает задачу и дату из человеческой фразы.
 
-Ты должен вернуть ТОЛЬКО JSON без пояснений и комментариев, вот в таком точном виде:
+Верни ТОЛЬКО JSON без комментариев, вот так:
 
 {{
   "text": "что сделать",
@@ -59,6 +59,17 @@ async def parse_with_gpt(text):
             temperature=0.2
         )
         content = response.choices[0].message["content"].strip()
+
+        print("📥 GPT вернул:\n", content)  # 💬 Печатаем ответ в логи
+
+        if content.startswith("```"):
+            content = content.split("```")[-1].strip()
+
+        return json.loads(content)
+    except Exception as e:
+        print("❌ GPT ошибка:", e)
+        return None
+
 
         # Удалим возможные обёртки вроде "```json"
         if content.startswith("```"):
