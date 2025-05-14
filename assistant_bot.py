@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta
 import pytz
 import openai
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters, JobQueue
 from dotenv import load_dotenv
 
@@ -218,6 +218,30 @@ async def clear_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("🧹 Все твои задачи удалены.")
 
+async def clear_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [
+            InlineKeyboardButton("✅ Да, удалить", callback_data="confirm_clear"),
+            InlineKeyboardButton("❌ Нет", callback_data="cancel_clear"),
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("❗ Ты уверен, что хочешь удалить все задачи?", reply_markup=reply_markup)
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    chat_id = query.message.chat_id
+
+    if query.data == "confirm_clear":
+        tasks = load_tasks()
+        tasks = [task for task in tasks if task["chat_id"] != chat_id]
+        save_tasks(tasks)
+        await query.edit_message_text("🧹 Все задачи удалены.")
+    elif query.data == "cancel_clear":
+        await query.edit_message_text("Отмена удаления.")
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привет! Напиши что-то вроде: «напомни завтра в 10:00 купить хлеб» — и я запомню 😉")
@@ -230,6 +254,8 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("tasks", show_tasks))
     app.add_handler(CommandHandler("delete", delete_task))
     app.add_handler(CommandHandler("clear", clear_tasks))
+    app.add_handler(CommandHandler("clear", clear_tasks))
+    app.add_handler(telegram.ext.CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
     tasks = load_tasks()
