@@ -151,28 +151,20 @@ async def parse_with_gpt(text):
             temperature=0.2
         )
         content = response.choices[0].message["content"].strip()
-        print("📥 GPT вернул:\\n", content)
+        print("📥 GPT вернул:\n", content)
 
         if content.startswith("```"):
             content = content.split("```")[-1].strip()
 
-        try:
-            return json.loads(content)
-except json.JSONDecodeError as e:
-    first_brace = content.find('{')
-    last_brace = content.rfind('}')
-    if first_brace != -1 and last_brace != -1:
-    try:
-    return json.loads(content)
-except json.JSONDecodeError as e:
-    print("❌ Ошибка разбора JSON:", e)
-    return None
+        return json.loads(content)
 
-
-
+    except json.JSONDecodeError as e:
+        print("❌ Ошибка разбора JSON:", e)
+        return None
     except Exception as e:
         print("❌ GPT ошибка:", e)
         return None
+
 
 async def show_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("📥 Вызван /tasks")
