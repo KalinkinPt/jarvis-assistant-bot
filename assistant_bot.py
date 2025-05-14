@@ -200,17 +200,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-    job_queue = app.job_queue  # ✅ эта строка — строго на один уровень отступа
+    job_queue = app.job_queue
 
     app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("tasks", show_tasks))
-app.add_handler(CommandHandler("delete", delete_task))
-app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+    app.add_handler(CommandHandler("tasks", show_tasks))
+    app.add_handler(CommandHandler("delete", delete_task))
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+
     tasks = load_tasks()
     for task in tasks:
-        if datetime.fromisoformat(task["time"]) > datetime.now(pytz.timezone("Europe/Tallinn")):
+        if "repeat" in task:
+            schedule_repeating_task(task, app)
+        elif datetime.fromisoformat(task["time"]) > datetime.now(pytz.timezone("Europe/Tallinn")):
             schedule_task(task, app)
 
     print("Бот запущен.")
     app.run_polling()
+
 
