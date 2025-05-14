@@ -162,12 +162,12 @@ except json.JSONDecodeError as e:
     first_brace = content.find('{')
     last_brace = content.rfind('}')
     if first_brace != -1 and last_brace != -1:
-        try:
-            return json.loads(content[first_brace:last_brace+1])
-        except:
-            pass
-    print("❌ Ошибка JSON:", e)
+    try:
+    return json.loads(content)
+except json.JSONDecodeError as e:
+    print("❌ Ошибка разбора JSON:", e)
     return None
+
 
 
     except Exception as e:
