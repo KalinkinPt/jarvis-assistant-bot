@@ -2,4 +2,5 @@ python-telegram-bot==20.3
 apscheduler
 dateparser
 python-dotenv
-openai
+openai==0.28.1
+
