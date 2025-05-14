@@ -53,8 +53,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привет! Я твой ассистент. Напиши, что тебе напомнить.")
 
-async def main():
+if __name__ == "__main__":
+    from telegram.ext import ApplicationBuilder
+
     app = ApplicationBuilder().token(BOT_TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
@@ -64,12 +67,5 @@ async def main():
             schedule_task(task, app.bot)
 
     print("Бот запущен.")
-    await app.run_polling()
-
-if __name__ == "__main__":
-    import asyncio
-
-    loop = asyncio.get_event_loop()
-    loop.create_task(main())
-    loop.run_forever()
+    app.run_polling()
 
