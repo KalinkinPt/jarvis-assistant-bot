@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, ReplyKeyboardMarkup
 import pytz
 import openai
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -25,6 +25,14 @@ def load_tasks():
 def save_tasks(tasks):
     with open('tasks.json', 'w') as f:
         json.dump(tasks, f)
+
+def get_main_menu():
+    keyboard = [
+        ["📋 Мои задачи", "📅 Сегодня"],
+        ["🧹 Очистить всё"]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
 
 def schedule_task(task, application):
     tz = pytz.timezone("Europe/Tallinn")
@@ -160,10 +168,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_input = update.message.text
+
+    # Поддержка кнопок
+    if user_input == "📋 Мои задачи":
+        await show_tasks(update, context)
+        return
+    elif user_input == "📅 Сегодня":
+        await show_tasks_today(update, context)
+        return
+    elif user_input == "🧹 Очистить всё":
+        await clear_tasks(update, context)
+        return
+
     gpt_result = await parse_with_gpt(user_input)
 
     if not gpt_result:
-        await update.message.reply_text("🤖 Не смог распознать дату и время. Попробуй иначе.")
+        await update.message.reply_text("🤖 Не смог распознать дату и время. Попробуй иначе.", reply_markup=get_main_menu())
         return
 
     # ✅ Несколько задач в списке
@@ -182,7 +202,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 save_tasks(tasks)
                 count += 1
 
-        await update.message.reply_text(f"✅ Запомнил {count} задач(и)")
+        await update.message.reply_text(f"✅ Запомнил {count} задач(и)", reply_markup=get_main_menu())
         return
 
     # 🔁 Повторяющаяся задача
@@ -190,7 +210,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         task = {
             "chat_id": update.effective_chat.id,
             "text": gpt_result["text"],
-            "time": gpt_result["time"],  # формат: "08:00"
+            "time": gpt_result["time"],
             "repeat": gpt_result["repeat"]
         }
         schedule_repeating_task(task, context.application)
@@ -200,7 +220,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_tasks(tasks)
 
         await update.message.reply_text(
-            f"🔁 Буду напоминать: '{task['text']}' в {task['time']} по дням: {', '.join(task['repeat'])}"
+            f"🔁 Буду напоминать: '{task['text']}' в {task['time']} по {', '.join(task['repeat'])}",
+            reply_markup=get_main_menu()
         )
         return
 
@@ -217,12 +238,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             tasks.append(task)
             save_tasks(tasks)
 
-        await update.message.reply_text(f"✅ Запланировал несколько напоминаний: {len(gpt_result['time'])}")
+        await update.message.reply_text(f"✅ Запланировал несколько напоминаний: {len(gpt_result['time'])}", reply_markup=get_main_menu())
         return
 
     # 🕐 Обычная одноразовая задача
     if not gpt_result.get("time"):
-        await update.message.reply_text("🤖 Не смог распознать дату и время. Попробуй иначе.")
+        await update.message.reply_text("🤖 Не смог распознать дату и время. Попробуй иначе.", reply_markup=get_main_menu())
         return
 
     task = {
@@ -237,7 +258,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_tasks(tasks)
 
     time_str = datetime.fromisoformat(task["time"]).strftime('%Y-%m-%d %H:%M')
-    await update.message.reply_text(f"✅ Запомнил! Напомню: ‘{task['text']}’ в {time_str}")
+    await update.message.reply_text(f"✅ Запомнил! Напомню: ‘{task['text']}’ в {time_str}", reply_markup=get_main_menu())
+
 
 
 async def show_tasks_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
