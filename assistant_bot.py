@@ -151,6 +151,50 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     time_str = datetime.fromisoformat(task["time"]).strftime('%Y-%m-%d %H:%M')
     await update.message.reply_text(f"✅ Запомнил! Напомню: ‘{task['text']}’ в {time_str}")
 
+async def show_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tasks = load_tasks()
+    chat_id = update.effective_chat.id
+    user_tasks = [task for task in tasks if task["chat_id"] == chat_id]
+
+    if not user_tasks:
+        await update.message.reply_text("🔕 У тебя нет запланированных задач.")
+        return
+
+    text = "🗓 Твои задачи:\n"
+    for i, task in enumerate(user_tasks):
+        if "repeat" in task:
+            text += f"{i + 1}. 🔁 {task['text']} — в {task['time']} по {', '.join(task['repeat'])}\n"
+        else:
+            t = datetime.fromisoformat(task["time"]).strftime('%Y-%m-%d %H:%M')
+            text += f"{i + 1}. ⏰ {task['text']} — {t}\n"
+
+    await update.message.reply_text(text)
+
+async def delete_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tasks = load_tasks()
+    chat_id = update.effective_chat.id
+    user_tasks = [task for task in tasks if task["chat_id"] == chat_id]
+
+    if not context.args:
+        await update.message.reply_text("❗ Используй: /delete [номер задачи]")
+        return
+
+    try:
+        index = int(context.args[0]) - 1
+        if index < 0 or index >= len(user_tasks):
+            raise ValueError()
+
+        task_to_delete = user_tasks[index]
+        tasks.remove(task_to_delete)
+        save_tasks(tasks)
+
+        await update.message.reply_text(f"🗑 Задача удалена: {task_to_delete['text']}")
+
+    except ValueError:
+        await update.message.reply_text("❗ Неверный номер. Посмотри /tasks")
+
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привет! Напиши что-то вроде: «напомни завтра в 10:00 купить хлеб» — и я запомню 😉")
 
@@ -159,6 +203,9 @@ if __name__ == "__main__":
     job_queue = app.job_queue  # ✅ эта строка — строго на один уровень отступа
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("tasks", show_tasks))
+app.add_handler(CommandHandler("delete", delete_task))
+
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
     tasks = load_tasks()
