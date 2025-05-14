@@ -28,15 +28,28 @@ def save_tasks(tasks):
 
 def schedule_task(task, application):
     tz = pytz.timezone("Europe/Tallinn")
-    run_time = tz.localize(datetime.fromisoformat(task["time"]))  # 🛠 исправили тут
-    delay = (run_time - datetime.now(tz)).total_seconds()
+    run_time = tz.localize(datetime.fromisoformat(task["time"]))
 
-    if delay > 0:
-        print(f"⏰ Планируем задачу через {int(delay)} сек: {task['text']}")
-        application.job_queue.run_once(
-            lambda context: context.bot.send_message(chat_id=task["chat_id"], text=f"🔔 Напоминание: {task['text']}"),
-            when=delay
-        )
+    def make_job(delay_seconds, prefix):
+        if delay_seconds > 0:
+            application.job_queue.run_once(
+                lambda context: context.bot.send_message(
+                    chat_id=task["chat_id"],
+                    text=f"{prefix} {task['text']}"
+                ),
+                when=delay_seconds
+            )
+
+    now = datetime.now(tz)
+    delay_main = (run_time - now).total_seconds()
+    delay_30 = delay_main - 1800  # 30 минут до
+    delay_15 = delay_main - 900   # 15 минут до
+
+    print(f"⏰ Планируем задачу: {task['text']} на {run_time}")
+    make_job(delay_30, "⚠️ Через 30 мин:")
+    make_job(delay_15, "⏱ Почти время:")
+    make_job(delay_main, "🔔 Сейчас:")
+
 
 def schedule_repeating_task(task, application):
     from datetime import time
