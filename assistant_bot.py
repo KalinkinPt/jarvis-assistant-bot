@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import pytz
 import openai
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -52,7 +52,7 @@ def schedule_task(task, application):
 
 
 def schedule_repeating_task(task, application):
-    from datetime import time
+    from datetime import datetime, timedelta, time
 
     hour, minute = map(int, task["time"].split(":"))
     message = task["text"]
@@ -63,10 +63,43 @@ def schedule_repeating_task(task, application):
         "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6
     }
 
+    target_time = time(hour, minute)
+
+    # Время "за 30 минут"
+    time_30_before = (datetime.combine(datetime.today(), target_time) - timedelta(minutes=30)).time()
+    # Время "за 15 минут"
+    time_15_before = (datetime.combine(datetime.today(), target_time) - timedelta(minutes=15)).time()
+
+    day_list = [day_indexes[d] for d in days]
+
+    # Напоминание за 30 мин
     application.job_queue.run_daily(
-        lambda context: context.bot.send_message(chat_id=task["chat_id"], text=f"🔁 Напоминание: {message}"),
-        time=time(hour, minute),
-        days=[day_indexes[day] for day in days]
+        lambda context: context.bot.send_message(
+            chat_id=task["chat_id"],
+            text=f"⚠️ Через 30 мин: {message}"
+        ),
+        time=time_30_before,
+        days=day_list
+    )
+
+    # Напоминание за 15 мин
+    application.job_queue.run_daily(
+        lambda context: context.bot.send_message(
+            chat_id=task["chat_id"],
+            text=f"⏱ Почти время: {message}"
+        ),
+        time=time_15_before,
+        days=day_list
+    )
+
+    # Напоминание в точное время
+    application.job_queue.run_daily(
+        lambda context: context.bot.send_message(
+            chat_id=task["chat_id"],
+            text=f"🔔 Сейчас: {message}"
+        ),
+        time=target_time,
+        days=day_list
     )
 
 async def parse_with_gpt(text):
