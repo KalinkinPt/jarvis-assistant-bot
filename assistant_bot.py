@@ -239,9 +239,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tasks = load_tasks()
         tasks = [task for task in tasks if task["chat_id"] != chat_id]
         save_tasks(tasks)
-        await query.edit_message_text("🧹 Все задачи удалены.")
+
+        await query.message.delete()
+        await query.message.reply_text("🧹 Все задачи удалены.")
     elif query.data == "cancel_clear":
-        await query.edit_message_text("Отмена удаления.")
+        await query.message.delete()
+        await query.message.reply_text("❌ Удаление отменено.")
+
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
