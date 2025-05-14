@@ -165,6 +165,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     time_str = datetime.fromisoformat(task["time"]).strftime('%Y-%m-%d %H:%M')
     await update.message.reply_text(f"✅ Запомнил! Напомню: ‘{task['text']}’ в {time_str}")
 
+
 async def show_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("📥 Вызван /tasks")
     tasks = load_tasks()
