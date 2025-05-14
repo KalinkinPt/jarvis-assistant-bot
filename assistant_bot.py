@@ -83,7 +83,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"✅ Запомнил! Напомню: ‘{task['text']}’ в {time_str}")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Привет! Напиши мне что-то вроде: "напомни завтра в 10:00 купить хлеб" — и я запомню 😉")
+    await update.message.reply_text("Привет! Напиши что-то вроде: «напомни завтра в 10:00 купить хлеб» — и я запомню 😉")
+
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(BOT_TOKEN).build()
