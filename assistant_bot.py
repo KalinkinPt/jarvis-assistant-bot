@@ -107,12 +107,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-job_queue = app.job_queue
+    job_queue = app.job_queue  # ✅ эта строка — строго на один уровень отступа
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
-    # Восстанавливаем старые задачи
     tasks = load_tasks()
     for task in tasks:
         if datetime.fromisoformat(task["time"]) > datetime.now(pytz.timezone("Europe/Tallinn")):
@@ -120,3 +119,4 @@ job_queue = app.job_queue
 
     print("Бот запущен.")
     app.run_polling()
+
