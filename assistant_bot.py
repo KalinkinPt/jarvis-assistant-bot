@@ -203,11 +203,9 @@ if __name__ == "__main__":
     job_queue = app.job_queue  # ✅ эта строка — строго на один уровень отступа
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("tasks", show_tasks))
-    app.add_handler(CommandHandler("delete", delete_task))
-
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-
+app.add_handler(CommandHandler("tasks", show_tasks))
+app.add_handler(CommandHandler("delete", delete_task))
+app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     tasks = load_tasks()
     for task in tasks:
         if datetime.fromisoformat(task["time"]) > datetime.now(pytz.timezone("Europe/Tallinn")):
