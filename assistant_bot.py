@@ -296,12 +296,21 @@ async def show_tasks_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for task in user_tasks:
         if "repeat" in task:
-            continue  # не показываем повторяющиеся
+            continue  # повторяющиеся не показываем
+
         try:
-            task_time = datetime.fromisoformat(task["time"]).astimezone(tz)
+            # Приводим ко времени Европы/Таллин
+            task_time = datetime.fromisoformat(task["time"])
+            if task_time.tzinfo is None:
+                task_time = tz.localize(task_time)
+            else:
+                task_time = task_time.astimezone(tz)
+
             if task_time.date() == today_date:
                 today_tasks.append((task["text"], task_time))
-        except:
+
+        except Exception as e:
+            print(f"⚠️ Ошибка при обработке задачи: {e}")
             continue
 
     if not today_tasks:
@@ -332,6 +341,7 @@ async def show_tasks_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += f"{i + 1}. ⏰ {task_text} — {t_str} ({left})\n"
 
     await update.message.reply_text(text)
+
 
 
 async def delete_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
