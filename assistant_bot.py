@@ -217,21 +217,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_input = update.message.text
 
     # Обработка текстовых кнопок
-if user_input == "🗓 Мои задачи":
-    await show_tasks(update, context)
+  if user_input == "🗓 Мои задачи":
+      await show_tasks(update, context)
     return
-elif user_input == "📅 Сегодня":
-    await show_tasks_today(update, context)
-    return
-elif user_input == "🧹 Очистить все":
-    await clear_tasks(update, context)
-    return
-elif user_input == "🔁 Повторяющиеся":
-    await show_repeating_tasks(update, context)
-    return
-elif user_input == "❌ Удалить задачу":
-    await update.message.reply_text("Напиши номер задачи из списка /tasks для удаления:\nНапример: /delete 2")
-    return
+  elif user_input == "📅 Сегодня":
+      await show_tasks_today(update, context)
+      return
+  elif user_input == "🧹 Очистить все":
+      await clear_tasks(update, context)
+      return
+  elif user_input == "🔁 Повторяющиеся":
+      await show_repeating_tasks(update, context)
+      return
+  elif user_input == "❌ Удалить задачу":
+      await update.message.reply_text("Напиши номер задачи из списка /tasks для удаления:\nНапример: /delete 2")
+      return
 
 
     # Поддержка кнопок
