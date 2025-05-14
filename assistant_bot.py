@@ -37,11 +37,22 @@ def schedule_task(task, context):
         run_date=run_time
     )
 
+from datetime import datetime
+import json
+import openai
+
 async def parse_with_gpt(text):
+    now = datetime.now()
+    today = now.strftime("%Y-%m-%d")
+    current_time = now.strftime("%H:%M")
+
     prompt = f"""
+Сегодня: {today}
+Текущее время: {current_time}
+
 Ты — ассистент, который извлекает задачу и дату из человеческой фразы.
 
-Верни ТОЛЬКО JSON без комментариев, вот так:
+Верни ТОЛЬКО JSON без пояснений, вот так:
 
 {{
   "text": "что сделать",
@@ -60,15 +71,16 @@ async def parse_with_gpt(text):
         )
         content = response.choices[0].message["content"].strip()
 
-        print("📥 GPT вернул:\n", content)  # 💬 Печатаем ответ в логи
-
         if content.startswith("```"):
             content = content.split("```")[-1].strip()
 
+        print("📥 GPT вернул:\n", content)
         return json.loads(content)
+
     except Exception as e:
         print("❌ GPT ошибка:", e)
         return None
+
 
 
         # Удалим возможные обёртки вроде "```json"
