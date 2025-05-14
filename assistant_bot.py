@@ -28,8 +28,9 @@ def save_tasks(tasks):
 
 def get_main_menu():
     keyboard = [
-        ["📋 Мои задачи", "📅 Сегодня"],
-        ["🧹 Очистить всё"]
+        [KeyboardButton("🗓 Мои задачи"), KeyboardButton("📅 Сегодня")],
+        [KeyboardButton("🔁 Повторяющиеся"), KeyboardButton("❌ Удалить задачу")],
+        [KeyboardButton("🧹 Очистить все"), KeyboardButton("➕ Новая задача")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
@@ -214,6 +215,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_input = update.message.text
+
+    # Обработка текстовых кнопок
+if user_input == "🗓 Мои задачи":
+    await show_tasks(update, context)
+    return
+elif user_input == "📅 Сегодня":
+    await show_tasks_today(update, context)
+    return
+elif user_input == "🧹 Очистить все":
+    await clear_tasks(update, context)
+    return
+elif user_input == "🔁 Повторяющиеся":
+    await show_repeating_tasks(update, context)
+    return
+elif user_input == "❌ Удалить задачу":
+    await update.message.reply_text("Напиши номер задачи из списка /tasks для удаления:\nНапример: /delete 2")
+    return
+
 
     # Поддержка кнопок
     if user_input == "📋 Мои задачи":
@@ -418,6 +437,20 @@ async def show_tasks_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(text)
 
+async def show_repeating_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tasks = load_tasks()
+    chat_id = update.effective_chat.id
+    user_tasks = [task for task in tasks if task["chat_id"] == chat_id and "repeat" in task]
+
+    if not user_tasks:
+        await update.message.reply_text("🔁 У тебя нет повторяющихся задач.")
+        return
+
+    text = "🔁 Повторяющиеся задачи:\n"
+    for i, task in enumerate(user_tasks):
+        text += f"{i + 1}. {task['text']} — в {task['time']} по {', '.join(task['repeat'])}\n"
+
+    await update.message.reply_text(text)
 
 
 async def delete_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
