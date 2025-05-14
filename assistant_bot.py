@@ -27,12 +27,15 @@ def save_tasks(tasks):
         json.dump(tasks, f)
 
 def get_main_menu():
-    keyboard = [
-        [KeyboardButton("🗓 Мои задачи"), KeyboardButton("📅 Сегодня")],
-        [KeyboardButton("🔁 Повторяющиеся"), KeyboardButton("❌ Удалить задачу")],
-        [KeyboardButton("🧹 Очистить все"), KeyboardButton("➕ Новая задача")]
-    ]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton("🗓 Мои задачи"), KeyboardButton("📅 Сегодня")],
+            [KeyboardButton("📆 Завтра"), KeyboardButton("🧹 Очистить все")],
+            [KeyboardButton("🔁 Повторяющиеся"), KeyboardButton("🗑 Удалить задачу")]
+        ],
+        resize_keyboard=True
+    )
+
 
 
 def schedule_task(task, application):
@@ -223,6 +226,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif user_input == "📅 Сегодня":
         await show_tasks_today(update, context)
         return
+    elif user_input == "📆 Завтра":
+        await show_tasks_tomorrow(update, context)
+        return
+
     elif user_input == "🧹 Очистить все":
         await clear_tasks(update, context)
         return
@@ -436,6 +443,54 @@ async def show_tasks_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(text)
 
+async def show_tasks_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("📥 Вызван /tasks_tomorrow")
+    tasks = load_tasks()
+    chat_id = update.effective_chat.id
+    user_tasks = [task for task in tasks if task["chat_id"] == chat_id]
+
+    tz = pytz.timezone("Europe/Tallinn")
+    now = datetime.now(tz)
+    tomorrow_date = now.date() + timedelta(days=1)
+
+    tomorrow_tasks = []
+
+    for task in user_tasks:
+        if "repeat" in task:
+            continue  # повторяющиеся пока не выводим
+
+        try:
+            task_time = datetime.fromisoformat(task["time"])
+            if task_time.tzinfo is None:
+                task_time = tz.localize(task_time)
+            else:
+                task_time = task_time.astimezone(tz)
+
+            if task_time.date() == tomorrow_date:
+                tomorrow_tasks.append((task["text"], task_time))
+
+        except Exception as e:
+            print(f"⚠️ Ошибка при обработке задачи: {e}")
+            continue
+
+    if not tomorrow_tasks:
+        await update.message.reply_text("Завтра у тебя нет задач 🌙")
+        return
+
+    def format_timedelta(delta):
+        hours = delta.seconds // 3600
+        minutes = (delta.seconds % 3600) // 60
+        return f"{hours} ч {minutes} мин"
+
+    text = "📆 Задачи на завтра:\n"
+    for i, (task_text, task_time) in enumerate(sorted(tomorrow_tasks, key=lambda x: x[1])):
+        delta = task_time - now
+        t_str = task_time.strftime('%H:%M')
+        text += f"{i + 1}. ⏰ {task_text} — {t_str}\n"
+
+    await update.message.reply_text(text)
+
+
 async def show_repeating_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tasks = load_tasks()
     chat_id = update.effective_chat.id
@@ -542,6 +597,7 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("tasks", show_tasks_menu))
     app.add_handler(CommandHandler("tasks_today", show_tasks_today))
+    app.add_handler(CommandHandler("tasks_tomorrow", show_tasks_tomorrow))
     app.add_handler(CommandHandler("delete", delete_task))
     app.add_handler(CommandHandler("clear", clear_tasks))
     app.add_handler(CallbackQueryHandler(button_handler))  # обработка кнопок
