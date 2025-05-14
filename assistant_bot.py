@@ -27,7 +27,8 @@ def save_tasks(tasks):
 
 def schedule_task(task, application):
     tz = pytz.timezone("Europe/Tallinn")
-    run_time = datetime.fromisoformat(task["time"])
+    run_time = pytz.timezone("Europe/Tallinn").localize(datetime.fromisoformat(task["time"]))
+
     delay = (run_time - datetime.now(tz)).total_seconds()
 
     if delay > 0:
